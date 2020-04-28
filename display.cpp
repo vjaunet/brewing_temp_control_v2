@@ -23,38 +23,61 @@ void display::set_current_temp(float T){
   current_temp = T;
 }
 
-void display::setRemainingTime(uint32_t time_in_msec){
-  remaining_time_msec = time_in_msec;
+void display::set_current_power(float P){
+  // test the values of intput Power
+  if ( P > 1.0) {
+    P = 1.0;
+  } else if (P < 0){
+    P = 0;
+  }
+
+  //update the values to be diaplayed
+  current_power = (uint8_t)(P*100);
+  update_power_char();
 }
 
-float display::getTempSetpoint(){
+void display::update_power_char(){
+  setpoint_val[4]=(current_power/100)%10; //hundreds
+  setpoint_val[5]=(current_power/10)%10;  //tens
+  setpoint_val[6]=current_power%10;       //ones
+}
 
+
+float display::getTempSetpoint(){
   return setpoint_val[0]*10. +
     setpoint_val[1] +
     setpoint_val[2]*.1 +
     setpoint_val[3]*.01;
 }
 
-uint32_t display::getTimeSetpoint(){
-
-  return (uint32_t)
-    60000*(setpoint_val[4]*10 +
-	   setpoint_val[5]) +
-    1000*(setpoint_val[6]*10 +
-	  setpoint_val[7]);
+float display::getPowerSetpoint(){
+  return (float)
+    (100*setpoint_val[4] +
+     10*setpoint_val[5] +
+     setpoint_val[6] )/100.;
 }
-
 
 void display::change_cursor_pos(){
   //increment the position of the cursor
   icursor++;
-  if (icursor > 7) icursor=0;
+  if (icursor > NBR_CHARACTER-1) icursor=0;
 }
 
 void display::increment_cursor_value(){
+
   //increment the value of the number at the cursor position
   setpoint_val[icursor] = setpoint_val[icursor]+1;
-  if (setpoint_val[icursor] > 9) setpoint_val[icursor]=0;
+  if (icursor == NBR_CHARACTER-3){
+    if (setpoint_val[icursor] > 1) setpoint_val[icursor]=0;
+  } else {
+    if (setpoint_val[icursor] > 9) setpoint_val[icursor]=0;
+  }
+
+  //if power is > than 100%, set it to 100%
+  if (setpoint_val[NBR_CHARACTER-3] == 1) {
+    setpoint_val[NBR_CHARACTER-2]=0;
+    setpoint_val[NBR_CHARACTER-1]=0;
+  }
 }
 
 void display::disp_current_temp(){
@@ -67,22 +90,15 @@ void display::disp_current_temp(){
   oled.print(current_temp);
 }
 
-void display::disp_remaining_time(){
-  // display remaining time
-  oled.setDrawColor(1);
-  oled.setFont(u8g2_font_helvR12_tr);
+// void display::disp_current_power(){
+//   // display actual used powwer
+//   oled.setDrawColor(1);
+//   oled.setFont(u8g2_font_helvR12_tr);
 
-  // timing
-  oled.setCursor(78, 54);
-  uint8_t min10=remaining_time_msec/600000;
-  oled.print(min10,DEC);
-  uint8_t min=(remaining_time_msec - 600000*min10)/60000;
-  oled.print(min,DEC);
-  oled.print(":");
-  uint8_t sec=(remaining_time_msec - (10*min10 + min)*60000)/1000;
-  oled.print(sec/10,DEC);
-  oled.print(sec-10*(sec/10),DEC);
-}
+//   //temperature
+//   oled.setCursor(79, 54);
+//   oled.print((uint8_t) current_power*100);
+// }
 
 void display::disp_cursor(){
   //draw a box at the cursor position
@@ -106,7 +122,7 @@ void display::disp_setpoints(){
   oled.setDrawColor(2); //for cursor overlay
   oled.setFont(u8g2_font_helvB12_tr);
 
-  for(uint8_t i=0; i < 8; i++){
+  for(uint8_t i=0; i < NBR_CHARACTER; i++){
     oled.setCursor(xcursor[i], 34);
     oled.print(setpoint_val[i]);
   }
@@ -115,8 +131,8 @@ void display::disp_setpoints(){
   oled.setCursor(26, 35);
   oled.print(".");
 
-  oled.setCursor(93, 34);
-  oled.print(":");
+  oled.setCursor(103, 34);
+  oled.print("%");
 
 }
 
@@ -124,18 +140,24 @@ void display::disp_glyph(){
   //display glyphs on the top of the display
   oled.setFont(u8g2_font_unifont_t_symbols);
   oled.drawGlyph(26,14,0x2103); // °C
-  oled.drawGlyph(90,14,0x23f1); // Chrono
+  oled.drawGlyph(90,14,0x2615); // Heating Cup
   oled.drawLine(64,0,64,63);
 }
 
 void display::refresh_display(){
   //create and send the buffer to the oled
   //screen.
-  oled.clearBuffer();
-  disp_glyph();
-  disp_cursor();
-  disp_setpoints();
-  disp_current_temp();
-  disp_remaining_time();
-  oled.sendBuffer();
+
+  //oled.clearBuffer();
+
+  oled.firstPage();
+  do {
+    disp_glyph();
+    disp_cursor();
+    disp_setpoints();
+    disp_current_temp();
+    //disp_current_power();
+  } while( oled.nextPage() );
+
+  //oled.sendBuffer();
 }

@@ -10,7 +10,6 @@
 ============================================================== */
 #include <OneWire.h>
 #include "DallasTemperature.h"
-#include "actuator.h"
 #include "display.h"
 #include "timer1.h"
 
@@ -18,7 +17,7 @@
 
 //Some global variables
 float cur_temp;
-uint16_t remain_time_sec=3600;
+uint8_t cur_power;
 
 /* ============================================================= */
 // Data wire is plugged into pin 2 on the Arduino
@@ -37,8 +36,6 @@ display display;
 
 /*============================================================== */
 // defining the heater
-// #define HEATER_PIN 9
-// actuator heater(HEATER_PIN);
 
 //we have a 50Hz power input so the duration of the
 //high state should be a multiple of a 20 ms period
@@ -135,12 +132,7 @@ void setup() {
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
 // the loop routine runs over and over
 bool start_process=false;
-bool setpoint_reached=false;
 
-uint32_t duration_setpoint_msec=0;
-uint32_t process_duration_msec=0;
-
-uint32_t last_loop_time=0;
 uint8_t Nloop=0;
 
 float last_temp=99.0;
@@ -156,7 +148,7 @@ void loop() {
       button_flag &= ~BTN_R_pressed;
 
       /*===== debouncing =====*/
-      wait_ms_(5);
+      wait_ms_(3);
       if ((PINB & (1 << BTN_R)) == 0)
 	display.change_cursor_pos();
     }
@@ -167,7 +159,7 @@ void loop() {
       button_flag &= ~BTN_L_pressed;
 
       /*===== debouncing =====*/
-      wait_ms_(5);
+      wait_ms_(3);
       if ((PINB & (1 << BTN_L)) == 0)
 	display.increment_cursor_value();
 
@@ -182,9 +174,6 @@ void loop() {
 	  (PINB & (1 << BTN_R)) == 0) {
 	//if still pressed : go !
 	start_process = !start_process;
-
-	setpoint_reached = false;
-	duration_setpoint_msec = display.getTimeSetpoint();
       }
     }
 
@@ -230,20 +219,18 @@ void loop() {
     // decide to heat or not.
     if ( meas_temp < (display.getTempSetpoint() - 2.0)) {
       //need to heat
-      heater_on();
+      heater_on(display.getPowerSetpoint());
 
     } else if ( meas_temp < display.getTempSetpoint() &&
 		meas_temp >= display.getTempSetpoint() - 2.0 ) {
       //the output power is set according to the temperature difference
       //the closer we are to the setpoint the less power we input to
       //avoid overheating
-      float err=abs(meas_temp-display.getTempSetpoint())/2.0;
-      heater_on(err);
+      float pow = display.getPowerSetpoint()*
+	abs(meas_temp-display.getTempSetpoint())/2.0;
+      heater_on(pow);
 
     } else {
-      //- set point  reached start timer
-      if ( meas_temp >= display.getTempSetpoint()) setpoint_reached = true;
-
       //not need to heat anymore
       heater_off();
     }
@@ -253,33 +240,12 @@ void loop() {
     //reccord the last measured temperature
     last_temp = meas_temp;
 
-    //compute the process duration if the Temperature
-    //setpoint has been reached
-    if (setpoint_reached){
-      process_duration_msec += (millis()-last_loop_time);
-    }
-    last_loop_time = millis();
-
     //update the displayed temperature
     display.set_current_temp(meas_temp);
-    //update the displayed remaining time if a duration was set
-    if ( duration_setpoint_msec != 0) {
-      display.setRemainingTime(duration_setpoint_msec - process_duration_msec);
-
-      //the temperature has been set for long enough, stop heating
-      if ( process_duration_msec >= duration_setpoint_msec){
-	heater_off();
-	display.setRemainingTime(0);
-	start_process = false;
-      }
-    }
 
   } else {
     // user may have pressed both buttons another time
     // to cancel the process
-    process_duration_msec = 0;
-    last_loop_time = millis();
-
     heater_off();
 
     //display back the cursor
