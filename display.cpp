@@ -27,12 +27,12 @@ void display::set_current_power(float P){
   // test the values of intput Power
   if ( P > 1.0) {
     P = 1.0;
-  } else if (P < 0){
+  } else if (P < 0.0){
     P = 0;
   }
 
   //update the values to be diaplayed
-  current_power = (uint8_t)(P*100);
+  current_power = (uint8_t)( P * 100.0);
   update_power_char();
 }
 
@@ -51,10 +51,9 @@ float display::getTempSetpoint(){
 }
 
 float display::getPowerSetpoint(){
-  return (float)
-    (100*setpoint_val[4] +
-     10*setpoint_val[5] +
-     setpoint_val[6] )/100.;
+  return ((float)(setpoint_val[4]*100 +
+		  setpoint_val[5]*10 +
+		  setpoint_val[6]))/100.;
 }
 
 void display::change_cursor_pos(){
@@ -68,15 +67,16 @@ void display::increment_cursor_value(){
   //increment the value of the number at the cursor position
   setpoint_val[icursor] = setpoint_val[icursor]+1;
   if (icursor == NBR_CHARACTER-3){
-    if (setpoint_val[icursor] > 1) setpoint_val[icursor]=0;
+    if (setpoint_val[icursor] > 1) setpoint_val[icursor]=' ';
   } else {
     if (setpoint_val[icursor] > 9) setpoint_val[icursor]=0;
   }
 
   //if power is > than 100%, set it to 100%
-  if (setpoint_val[NBR_CHARACTER-3] == 1) {
-    setpoint_val[NBR_CHARACTER-2]=0;
-    setpoint_val[NBR_CHARACTER-1]=0;
+  if (setpoint_val[NBR_CHARACTER-3] == 1 &&
+      (setpoint_val[NBR_CHARACTER-2] != 0 ||
+       setpoint_val[NBR_CHARACTER-1] != 0)) {
+    setpoint_val[NBR_CHARACTER-3] = 0;
   }
 }
 

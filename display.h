@@ -44,7 +44,7 @@ class display
   uint8_t  setpoint_val[NBR_CHARACTER]={2,5,0,0,1,0,0};
 
   float current_temp;
-  uint8_t current_power;
+  uint8_t current_power=100;
 
   uint8_t cursorColor=1;
 

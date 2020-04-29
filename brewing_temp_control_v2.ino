@@ -8,19 +8,24 @@
   licence : GPL v3.0
 
 ============================================================== */
+#include "Arduino.h"
 #include <OneWire.h>
 #include "DallasTemperature.h"
 #include "display.h"
 #include "timer1.h"
 
-//#define DEBUG
+//seems like the 328bb does not define the board correctly
+// #define __AVR_ATmega328P__ was added to the header
+#include "Encoder.h"
+
+#define DEBUG
 
 //Some global variables
 float cur_temp;
 uint8_t cur_power;
 
 /* ============================================================= */
-// Data wire is plugged into pin 2 on the Arduino
+// Data wire is plugged into pin 4 on the Arduino
 #define ONE_WIRE_BUS 2
 
 // Setup a oneWire instance to communicate with any OneWire devices
@@ -33,6 +38,12 @@ DallasTemperature sensors(&oneWire);
 /* ============================================================= */
 // OLED display
 display display;
+
+//* ============================================================ */
+// Encoder
+Encoder encoder(3,4);
+long encoderPos  = 0;
+
 
 /*============================================================== */
 // defining the heater
@@ -99,6 +110,7 @@ void setup() {
 
 #ifdef DEBUG
   Serial.begin(9600);
+  Serial.println("Started");
 #endif
 
   // Start up the library - default resolution 12bits
@@ -176,6 +188,25 @@ void loop() {
 	start_process = !start_process;
       }
     }
+
+  /*---------------------------------------------------------------*/
+  // Check the encoder state and modulate the power accordingly
+  long newEncoderPos = encoder.read();
+  if (newEncoderPos != encoderPos){
+    long delta =(newEncoderPos-encoderPos);
+    float cur_pow = display.getPowerSetpoint();
+#ifdef DEBUG
+    Serial.println( delta );
+    Serial.println( (uint8_t)( cur_pow *100) );
+#endif
+    display.set_current_power( cur_pow + delta*0.01);
+    encoderPos = newEncoderPos;
+#ifdef DEBUG
+    cur_pow = display.getPowerSetpoint();
+    Serial.println( cur_pow );
+#endif
+
+  }
 
   /*---------------------------------------------------------------*/
   // for display purposes :
