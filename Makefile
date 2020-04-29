@@ -5,9 +5,11 @@
 
 
 all:
-	arduino-cli compile \
-	--fqbn=arduino:avr:328bb \
-	--warnings all \
-	../brewing_temp_control_v2
+	@arduino-cli compile \
+		--fqbn=arduino:avr:328bb \
+		--warnings all \
+		../brewing_temp_control_v2
 
 upload:
+	@rsync -azv brewing_temp_control_v2.arduino.avr.328bb.hex ElecRpi:~/BURN/.
+	@ssh ElecRpi './BURN/burn2atmega328.sh BURN/brewing_temp_control_v2.arduino.avr.328bb.hex'

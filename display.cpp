@@ -90,16 +90,6 @@ void display::disp_current_temp(){
   oled.print(current_temp);
 }
 
-// void display::disp_current_power(){
-//   // display actual used powwer
-//   oled.setDrawColor(1);
-//   oled.setFont(u8g2_font_helvR12_tr);
-
-//   //temperature
-//   oled.setCursor(79, 54);
-//   oled.print((uint8_t) current_power*100);
-// }
-
 void display::disp_cursor(){
   //draw a box at the cursor position
   oled.setDrawColor(cursorColor);
@@ -126,6 +116,12 @@ void display::disp_setpoints(){
     oled.setCursor(xcursor[i], 34);
     oled.print(setpoint_val[i]);
   }
+
+  // //handle the 0xx % percentage
+  // if (setpoint_val[4] == 0) {
+  //   oled.setCursor(xcursor[4], 34);
+  //   oled.print(" ");
+  // }
 
   // display punctuation
   oled.setCursor(26, 35);
